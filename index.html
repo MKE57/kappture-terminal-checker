@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kappture Terminal Status/Session Tool</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --panel: #171a22;
+      --panel-2: #202431;
+      --border: #303646;
+      --text: #f5f7fb;
+      --muted: #a7afc2;
+      --accent: #e91e63;
+      --accent-2: #7c3aed;
+      --good: #10b981;
+      --warn: #f59e0b;
+      --bad: #ef476f;
+      --info: #38bdf8;
+      --shadow: rgba(0,0,0,0.28);
+      --radius: 16px;
+      --sidebar: 260px;
+      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background: radial-gradient(circle at top left, rgba(233,30,99,0.16), transparent 28%), var(--bg);
+      min-height: 100vh;
+    }
+
+    button, input, textarea, select { font: inherit; }
+
+    a { color: inherit; }
+
+    .app {
+      display: grid;
+      grid-template-columns: var(--sidebar) 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: rgba(12,14,20,0.94);
+      border-right: 1px solid var(--border);
+      padding: 20px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      box-shadow: 0 10px 30px var(--shadow);
+    }
+
+    .brand h1 {
+      font-size: 16px;
+      line-height: 1.15;
+      margin: 0;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav button {
+      width: 100%;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+      padding: 11px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: 0.16s ease;
+    }
+
+    .nav button:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .nav button.active {
+      background: linear-gradient(135deg, rgba(233,30,99,0.20), rgba(124,58,237,0.14));
+      border-color: rgba(233,30,99,0.34);
+      color: var(--text);
+    }
+
+    .sidebar-footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    main {
+      padding: 24px;
+      min-width: 0;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: -0.03em;
+    }
+
+    .topbar p {
+      margin: 7px 0 0;
+      color: var(--muted);
+    }
+
+    .clock-card {
+      min-width: 250px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      text-align: right;
+      box-shadow: 0 12px 32px var(--shadow);
+    }
+
+    .clock-time { font-size: 24px; font-weight: 800; }
+    .clock-date { color: var(--muted); font-size: 13px; margin-top: 3px; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .grid { display: grid; gap: 16px; }
+    .grid.cards { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+    .card {
+      background: rgba(23,26,34,0.94);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: 0 12px 38px var(--shadow);
+      min-width: 0;
+    }
+
+    .card h3, .card h4 { margin: 0 0 10px; }
+    .card p { color: var(--muted); }
+
+    .metric {
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      margin: 4px 0;
+    }
+
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .danger { color: var(--bad); }
+    .success { color: var(--good); }
+    .warning { color: var(--warn); }
+    .info { color: var(--info); }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 10px 13px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: 0.14s ease;
+      text-decoration: none;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn:hover { transform: translateY(-1px); border-color: rgba(255,255,255,0.24); }
+    .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: rgba(255,255,255,0.16); }
+    .btn.good { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.45); }
+    .btn.warn { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.45); }
+    .btn.bad { background: rgba(239,71,111,0.14); border-color: rgba(239,71,111,0.45); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    input[type="file"], input[type="text"], textarea {
+      width: 100%;
+      background: #0f121a;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 12px;
+    }
+
+    textarea { min-height: 150px; resize: vertical; }
+
+    label { display: block; color: var(--muted); font-size: 13px; margin: 12px 0 6px; }
+
+    .file-box {
+      border: 1px dashed rgba(255,255,255,0.22);
+      border-radius: var(--radius);
+      padding: 18px;
+      background: rgba(255,255,255,0.025);
+    }
+
+    .summary-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .pill.bad { color: #ffd5df; background: rgba(239,71,111,0.16); border-color: rgba(239,71,111,0.28); }
+    .pill.good { color: #c6f7e2; background: rgba(16,185,129,0.16); border-color: rgba(16,185,129,0.28); }
+    .pill.warn { color: #ffe8bd; background: rgba(245,158,11,0.16); border-color: rgba(245,158,11,0.28); }
+    .pill.info { color: #c5edff; background: rgba(56,189,248,0.15); border-color: rgba(56,189,248,0.28); }
+
+    details {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.025);
+      border-radius: var(--radius);
+      padding: 0;
+      overflow: hidden;
+    }
+
+    details + details { margin-top: 12px; }
+
+    summary {
+      padding: 14px 16px;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+    .details-body { padding: 0 16px 16px; }
+
+    .issue-list { display: grid; gap: 8px; margin: 10px 0 14px; }
+
+    .issue {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      background: rgba(0,0,0,0.16);
+    }
+
+    .issue.ignored { opacity: 0.62; }
+
+    .email-body, .report-body {
+      white-space: pre-wrap;
+      background: #0b0d13;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      color: #eef2ff;
+      overflow-x: auto;
+      line-height: 1.45;
+    }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      min-width: 780px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    .tree { display: grid; gap: 8px; }
+    .tree-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: center;
+      padding: 7px 8px;
+      border-radius: 10px;
+    }
+    .tree-row:hover { background: rgba(255,255,255,0.04); }
+    .indent-1 { margin-left: 26px; }
+    .indent-2 { margin-left: 52px; }
+    .tri-check {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: #111827;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 18px 44px var(--shadow);
+      display: none;
+      z-index: 1000;
+      max-width: 360px;
+    }
+
+    .toast.show { display: block; }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { height: auto; position: relative; }
+      .nav { grid-template-columns: repeat(2, 1fr); }
+      main { padding: 16px; }
+      .topbar { flex-direction: column; }
+      .clock-card { text-align: left; width: 100%; }
+      .issue { grid-template-columns: 1fr; }
+      .search-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">K</div>
+        <div>
+          <h1>Kappture Terminal Checks</h1>
+          <p>Status/session workflow tool</p>
+        </div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="sidebar-footer">
+        <div>Browser-only V1</div>
+        <div>CSV data is processed locally in this browser.</div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div>
+          <h2 id="pageTitle">Home</h2>
+          <p id="pageSubtitle">Daily overview and next actions.</p>
+        </div>
+        <div class="clock-card">
+          <div class="clock-time" id="clockTime">--:--:--</div>
+          <div class="clock-date" id="clockDate">Loading date...</div>
+        </div>
+      </div>
+
+      <section class="section active" id="home"></section>
+      <section class="section" id="status"></section>
+      <section class="section" id="session"></section>
+      <section class="section" id="review"></section>
+      <section class="section" id="emails"></section>
+      <section class="section" id="report"></section>
+      <section class="section" id="venues"></section>
+      <section class="section" id="settings"></section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const APP_KEY = "kapptureTerminalTool.v1";
+
+    const FIXED_TERMINAL_PLATFORMS = [
+      "linux[6.1.26-1.0.24-kappture-k2-hardened]-x86_64",
+      "linux[6.1.26-1.0.29-kappture-k2c-hardened]-x86_64",
+      "linux[6.1.26-1.0.25-kappture-k2-hardened]-x86_64",
+      "linux[6.1.26-1.0.23-kappture-k2-hardened]-x86_64",
+      "linux[6.1.26-1.0.24-kappture-k2c-hardened]-x86_64"
+    ];
+
+    const DEFAULT_EMAIL_TEMPLATE = {
+      greeting: "Morning team,",
+      intro: "It is important to ensure any open sessions are closed as soon as possible to declare sales and avoid finance reporting discrepancies. Terminals must be online to report declared sales to Kappture and Nifty19.\n\nPlease can we check the terminal(s) listed below, as they are showing as either offline or with open sessions from previous days.",
+      offlineHeading: "Offline terminal(s):",
+      sessionHeading: "Open session(s) from previous days:",
+      signOff: ""
+    };
+
+    const pages = [
+      ["home", "Home", "Daily overview and next actions."],
+      ["status", "Status CSV Import", "Upload the full Terminal Status CSV export."],
+      ["session", "Session CSV Import", "Upload the Terminal Session Activity CSV with Today Only unchecked."],
+      ["review", "Review", "Process imports, review issues, and ignore items for today."],
+      ["emails", "Export Emails", "Generate venue emails and open/copy drafts."],
+      ["report", "Daily Report", "Summary for the current check."],
+      ["venues", "Venue Management", "Manage site, outlet, terminal exclusions and email contacts."],
+      ["settings", "Settings", "Configure platforms, templates, and data controls."]
+    ];
+
+    function defaultState() {
+      return {
+        statusImport: null,
+        sessionImport: null,
+        lastProcessedAt: null,
+        processed: null,
+        venueConfig: {},
+        todayIgnores: {},
+        sentEmailLog: {},
+        dailySnapshots: [],
+        settings: {
+          allowedPlatforms: [...FIXED_TERMINAL_PLATFORMS],
+          emailTemplate: {...DEFAULT_EMAIL_TEMPLATE},
+          includeOutletInEmail: true,
+          sortByOutletThenTerminal: true,
+          excludeDoNotDelete: true,
+          excludeBlankLastConnection: true
+        }
+      };
+    }
+
+    let state = loadState();
+    let currentPage = "home";
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(APP_KEY);
+        if (!raw) return defaultState();
+        const saved = JSON.parse(raw);
+        return deepMerge(defaultState(), saved);
+      } catch (e) {
+        console.warn(e);
+        return defaultState();
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(APP_KEY, JSON.stringify(state));
+    }
+
+    function deepMerge(base, incoming) {
+      for (const key in incoming || {}) {
+        if (incoming[key] && typeof incoming[key] === "object" && !Array.isArray(incoming[key]) && base[key] && typeof base[key] === "object" && !Array.isArray(base[key])) {
+          deepMerge(base[key], incoming[key]);
+        } else {
+          base[key] = incoming[key];
+        }
+      }
+      return base;
+    }
+
+    function normaliseText(value) {
+      return String(value ?? "").replace(/\s+/g, " ").trim();
+    }
+
+    function normaliseKey(value) {
+      return normaliseText(value).toLowerCase();
+    }
+
+    function formatDateTime(iso) {
+      if (!iso) return "Not set";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "Not set";
+      return new Intl.DateTimeFormat("en-GB", { dateStyle: "short", timeStyle: "medium" }).format(d);
+    }
+
+    function todayKey() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function isToday(iso) {
+      if (!iso) return false;
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return false;
+      const n = new Date();
+      return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+    }
+
+    function startOfToday() {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function parseDate(value) {
+      const s = normaliseText(value);
+      if (!s) return null;
+
+      let m = s.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+      if (m) return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+
+      m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
+      if (m) return new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +m[6]);
+
+      const d = new Date(s);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function displayDateTime(value) {
+      const d = parseDate(value);
+      if (!d) return value || "Unknown";
+      return new Intl.DateTimeFormat("en-GB", { dateStyle: "short", timeStyle: "medium" }).format(d);
+    }
+
+    function toast(message) {
+      const el = document.getElementById("toast");
+      el.textContent = message;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 2800);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let field = "";
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        const next = text[i + 1];
+        if (inQuotes) {
+          if (c === '"' && next === '"') { field += '"'; i++; }
+          else if (c === '"') { inQuotes = false; }
+          else { field += c; }
+        } else {
+          if (c === '"') inQuotes = true;
+          else if (c === ',') { row.push(field); field = ""; }
+          else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+          else if (c === '\r') { /* skip */ }
+          else { field += c; }
+        }
+      }
+      row.push(field);
+      rows.push(row);
+      const filtered = rows.filter(r => r.some(v => String(v).trim() !== ""));
+      if (!filtered.length) return [];
+      const headers = filtered[0].map(h => normaliseText(h));
+      return filtered.slice(1).map((r, index) => {
+        const obj = { _rowNumber: index + 2 };
+        headers.forEach((h, i) => obj[h] = normaliseText(r[i] ?? ""));
+        return obj;
+      });
+    }
+
+    function downloadText(filename, text, type = "text/plain") {
+      const blob = new Blob([text], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function copyText(text, label = "Copied") {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast(label);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        toast(label);
+      }
+    }
+
+    function initNav() {
+      const nav = document.getElementById("nav");
+      nav.innerHTML = pages.map(([id, name]) => `<button data-page="${id}">${name}</button>`).join("");
+      nav.addEventListener("click", e => {
+        const btn = e.target.closest("button[data-page]");
+        if (btn) showPage(btn.dataset.page);
+      });
+    }
+
+    function showPage(id) {
+      currentPage = id;
+      document.querySelectorAll(".section").forEach(s => s.classList.toggle("active", s.id === id));
+      document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("active", b.dataset.page === id));
+      const page = pages.find(p => p[0] === id);
+      document.getElementById("pageTitle").textContent = page?.[1] || "Kappture Tool";
+      document.getElementById("pageSubtitle").textContent = page?.[2] || "";
+      render();
+    }
+
+    function tickClock() {
+      const now = new Date();
+      document.getElementById("clockTime").textContent = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(now);
+      document.getElementById("clockDate").textContent = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(now);
+    }
+
+    function getStatusStats() {
+      const rows = state.statusImport?.rows || [];
+      const allowed = new Set((state.settings.allowedPlatforms || []).map(normaliseText));
+      let disconnected = 0, excludedPlatform = 0, excludedServer = 0, excludedBlank = 0, actionable = 0;
+      rows.forEach(r => {
+        if (normaliseText(r["Connected?"]).toLowerCase() !== "no") return;
+        disconnected++;
+        if (!allowed.has(normaliseText(r.Platform))) { excludedPlatform++; return; }
+        if (state.settings.excludeDoNotDelete && /do not delete|donotdelete/i.test(r.Name || "")) { excludedServer++; return; }
+        if (state.settings.excludeBlankLastConnection && !normaliseText(r["Last Connection"])) { excludedBlank++; return; }
+        actionable++;
+      });
+      return { total: rows.length, disconnected, excludedPlatform, excludedServer, excludedBlank, actionable };
+    }
+
+    function getSessionStats() {
+      const rows = state.sessionImport?.rows || [];
+      const today = startOfToday();
+      let inSession = 0, openedToday = 0, previousDay = 0, missingDate = 0;
+      rows.forEach(r => {
+        if (normaliseText(r["In Session"]).toLowerCase() !== "yes") return;
+        inSession++;
+        const d = parseDate(r["Last Session Open"]);
+        if (!d) { missingDate++; return; }
+        if (d < today) previousDay++;
+        else openedToday++;
+      });
+      return { total: rows.length, inSession, openedToday, previousDay, missingDate };
+    }
+
+    function issueId(issue) {
+      return `${issue.type}|${normaliseKey(issue.site)}|${normaliseKey(issue.outlet)}|${normaliseKey(issue.terminal)}|${normaliseKey(issue.dateTime)}`;
+    }
+
+    function ensureVenueConfig(site, outlet, terminal) {
+      site = normaliseText(site);
+      outlet = normaliseText(outlet);
+      terminal = normaliseText(terminal);
+      if (!site) return;
+      if (!state.venueConfig[site]) {
+        state.venueConfig[site] = { site, enabled: true, to: [], cc: [], bcc: [], notes: "", outlets: {} };
+      }
+      if (outlet && !state.venueConfig[site].outlets[outlet]) {
+        state.venueConfig[site].outlets[outlet] = { outlet, enabled: true, notes: "", terminals: {} };
+      }
+      if (outlet && terminal && !state.venueConfig[site].outlets[outlet].terminals[terminal]) {
+        state.venueConfig[site].outlets[outlet].terminals[terminal] = { terminal, enabled: true, notes: "", excludeReason: "", excludeUntil: null };
+      }
+    }
+
+    function configFor(issue) {
+      const v = state.venueConfig[issue.site];
+      const o = v?.outlets?.[issue.outlet];
+      const t = o?.terminals?.[issue.terminal];
+      return { v, o, t };
+    }
+
+    function exclusionReason(issue) {
+      const { v, o, t } = configFor(issue);
+      if (v && v.enabled === false) return "Venue excluded";
+      if (o && o.enabled === false) return "Outlet excluded";
+      if (t && t.enabled === false) return "Terminal excluded";
+      if (state.todayIgnores[todayKey()]?.[issueId(issue)]) return "Ignored today";
+      return "";
+    }
+
+    function processData() {
+      const statusRows = state.statusImport?.rows || [];
+      const sessionRows = state.sessionImport?.rows || [];
+      const allowed = new Set((state.settings.allowedPlatforms || []).map(normaliseText));
+      const today = startOfToday();
+      const offlineIssues = [];
+      const sessionIssues = [];
+      const excludedRaw = [];
+
+      statusRows.forEach(r => {
+        const site = normaliseText(r.Site);
+        const outlet = normaliseText(r.Outlet);
+        const terminal = normaliseText(r.Name);
+        ensureVenueConfig(site, outlet, terminal);
+
+        if (normaliseText(r["Connected?"]).toLowerCase() !== "no") return;
+
+        const platform = normaliseText(r.Platform);
+        if (!allowed.has(platform)) { excludedRaw.push({ source: "status", reason: "Platform excluded", site, outlet, terminal }); return; }
+        if (state.settings.excludeDoNotDelete && /do not delete|donotdelete/i.test(terminal)) { excludedRaw.push({ source: "status", reason: "DO NOT DELETE row", site, outlet, terminal }); return; }
+        if (state.settings.excludeBlankLastConnection && !normaliseText(r["Last Connection"])) { excludedRaw.push({ source: "status", reason: "Blank Last Connection", site, outlet, terminal }); return; }
+
+        offlineIssues.push({ type: "offline", site, outlet, terminal, dateTime: normaliseText(r["Last Connection"]), platform });
+      });
+
+      sessionRows.forEach(r => {
+        const site = normaliseText(r.Site);
+        const outlet = normaliseText(r.Outlet || r.Outlets);
+        const terminal = normaliseText(r.Terminal);
+        ensureVenueConfig(site, outlet, terminal);
+
+        if (normaliseText(r["In Session"]).toLowerCase() !== "yes") return;
+        const opened = parseDate(r["Last Session Open"]);
+        if (!opened) { excludedRaw.push({ source: "session", reason: "Missing Last Session Open", site, outlet, terminal }); return; }
+        if (opened < today) {
+          sessionIssues.push({ type: "session", site, outlet, terminal, dateTime: normaliseText(r["Last Session Open"]), session: r.Session || "" });
+        }
+      });
+
+      const allIssues = [...offlineIssues, ...sessionIssues].map(i => ({...i, id: issueId(i), exclusion: exclusionReason(i)}));
+      const includedIssues = allIssues.filter(i => !i.exclusion);
+      const excludedIssues = allIssues.filter(i => i.exclusion);
+      const venues = groupByVenue(includedIssues);
+
+      state.processed = {
+        processedAt: new Date().toISOString(),
+        statusStats: getStatusStats(),
+        sessionStats: getSessionStats(),
+        offlineIssues,
+        sessionIssues,
+        allIssues,
+        includedIssues,
+        excludedIssues,
+        excludedRaw,
+        venues
+      };
+      state.lastProcessedAt = state.processed.processedAt;
+      saveState();
+      render();
+      toast("Status/session data processed");
+    }
+
+    function groupByVenue(issues) {
+      const grouped = {};
+      issues.forEach(issue => {
+        if (!grouped[issue.site]) grouped[issue.site] = { site: issue.site, offline: [], sessions: [] };
+        if (issue.type === "offline") grouped[issue.site].offline.push(issue);
+        if (issue.type === "session") grouped[issue.site].sessions.push(issue);
+      });
+      Object.values(grouped).forEach(v => {
+        const sorter = (a, b) => `${a.outlet} ${a.terminal}`.localeCompare(`${b.outlet} ${b.terminal}`, "en-GB", { numeric: true }));
+        v.offline.sort(sorter);
+        v.sessions.sort(sorter);
+      });
+      return grouped;
+    }
+
+    function refreshProcessedExclusions() {
+      if (!state.processed) return;
+      const all = [...(state.processed.offlineIssues || []), ...(state.processed.sessionIssues || [])].map(i => ({...i, id: issueId(i), exclusion: exclusionReason(i)}));
+      state.processed.allIssues = all;
+      state.processed.includedIssues = all.filter(i => !i.exclusion);
+      state.processed.excludedIssues = all.filter(i => i.exclusion);
+      state.processed.venues = groupByVenue(state.processed.includedIssues);
+      saveState();
+    }
+
+    function toggleTodayIgnore(id, enabled) {
+      const key = todayKey();
+      if (!state.todayIgnores[key]) state.todayIgnores[key] = {};
+      if (enabled) state.todayIgnores[key][id] = true;
+      else delete state.todayIgnores[key][id];
+      refreshProcessedExclusions();
+      render();
+    }
+
+    function generateEmail(venue) {
+      const cfg = state.venueConfig[venue.site] || {};
+      const t = state.settings.emailTemplate;
+      const lines = [t.greeting, "", t.intro, ""];
+      const formatIssue = (i, label) => `${i.terminal}${state.settings.includeOutletInEmail ? ` (${i.outlet})` : ""} - ${label} ${displayDateTime(i.dateTime)}`;
+      if (venue.offline.length) {
+        lines.push(t.offlineHeading);
+        venue.offline.forEach(i => lines.push(formatIssue(i, "offline since")));
+        lines.push("");
+      }
+      if (venue.sessions.length) {
+        lines.push(t.sessionHeading);
+        venue.sessions.forEach(i => lines.push(formatIssue(i, "session opened")));
+        lines.push("");
+      }
+      if (t.signOff) lines.push(t.signOff);
+      const body = lines.join("\n").trimEnd();
+      return {
+        to: (cfg.to || []).join("; "),
+        cc: (cfg.cc || []).join("; "),
+        bcc: (cfg.bcc || []).join("; "),
+        subject: `Kappture terminal/session checks - ${venue.site}`,
+        body
+      };
+    }
+
+    function mailtoLink(email) {
+      const params = [];
+      if (email.cc) params.push(`cc=${encodeURIComponent(email.cc.replaceAll(";", ","))}`);
+      if (email.bcc) params.push(`bcc=${encodeURIComponent(email.bcc.replaceAll(";", ","))}`);
+      params.push(`subject=${encodeURIComponent(email.subject)}`);
+      params.push(`body=${encodeURIComponent(email.body)}`);
+      return `mailto:${encodeURIComponent(email.to.replaceAll(";", ","))}?${params.join("&")}`;
+    }
+
+    function markSent(site, sent) {
+      const key = todayKey();
+      if (!state.sentEmailLog[key]) state.sentEmailLog[key] = {};
+      state.sentEmailLog[key][site] = sent ? new Date().toISOString() : null;
+      saveState();
+      render();
+    }
+
+    function isSent(site) {
+      return Boolean(state.sentEmailLog[todayKey()]?.[site]);
+    }
+
+    function dailyReportText() {
+      const p = state.processed;
+      if (!p) return "No processed data yet.";
+      const venueList = Object.values(p.venues || {});
+      const sent = venueList.filter(v => isSent(v.site)).length;
+      const lines = [];
+      lines.push("Kappture Terminal and Session Check");
+      lines.push(new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date()));
+      lines.push("");
+      lines.push(`Status rows imported: ${p.statusStats.total}`);
+      lines.push(`Session rows imported: ${p.sessionStats.total}`);
+      lines.push("");
+      lines.push(`Affected venues: ${venueList.length}`);
+      lines.push(`Offline terminals: ${p.includedIssues.filter(i => i.type === "offline").length}`);
+      lines.push(`Previous-day open sessions: ${p.includedIssues.filter(i => i.type === "session").length}`);
+      lines.push(`Excluded/ignored processed issues: ${p.excludedIssues.length}`);
+      lines.push(`Emails generated: ${venueList.length}`);
+      lines.push(`Emails marked as sent: ${sent}`);
+      lines.push("");
+      lines.push("Venue summary:");
+      venueList.sort((a,b) => a.site.localeCompare(b.site)).forEach(v => {
+        lines.push(`${v.site} - Offline: ${v.offline.length}, Open sessions: ${v.sessions.length}, Sent: ${isSent(v.site) ? "Yes" : "No"}`);
+      });
+      return lines.join("\n");
+    }
+
+    function dailyReportCsv() {
+      const p = state.processed;
+      if (!p) return "Venue,Offline,Open Sessions,Email Generated,Sent\n";
+      const rows = [["Venue", "Offline", "Open Sessions", "Email Generated", "Sent"]];
+      Object.values(p.venues || {}).sort((a,b) => a.site.localeCompare(b.site)).forEach(v => {
+        rows.push([v.site, v.offline.length, v.sessions.length, "Yes", isSent(v.site) ? "Yes" : "No"]);
+      });
+      return rows.map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+    }
+
+    function saveSnapshot() {
+      const snapshot = {
+        date: todayKey(),
+        savedAt: new Date().toISOString(),
+        report: dailyReportText(),
+        csv: dailyReportCsv(),
+        processed: state.processed
+      };
+      state.dailySnapshots.push(snapshot);
+      saveState();
+      toast("Daily snapshot saved");
+      render();
+    }
+
+    function handleFileUpload(kind, file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const text = String(reader.result || "");
+        const rows = parseCSV(text);
+        state[`${kind}Import`] = {
+          filename: file.name,
+          uploadedAt: new Date().toISOString(),
+          raw: text,
+          rows
+        };
+        state.processed = null;
+        saveState();
+        render();
+        toast(`${file.name} loaded`);
+      };
+      reader.readAsText(file);
+    }
+
+    function renderHome() {
+      const s = getStatusStats();
+      const se = getSessionStats();
+      const p = state.processed;
+      const venueCount = p ? Object.keys(p.venues || {}).length : 0;
+      const emailCount = venueCount;
+      document.getElementById("home").innerHTML = `
+        <div class="grid cards">
+          ${metricCard("Status CSV", state.statusImport ? `${s.actionable}` : "—", state.statusImport ? `Actionable offline terminals from ${s.total} rows` : "No Status CSV loaded", state.statusImport && isToday(state.statusImport.uploadedAt) ? "good" : "")}
+          ${metricCard("Session CSV", state.sessionImport ? `${se.previousDay}` : "—", state.sessionImport ? `Previous-day open sessions from ${se.total} rows` : "No Session CSV loaded", state.sessionImport && isToday(state.sessionImport.uploadedAt) ? "good" : "")}
+          ${metricCard("Affected Venues", p ? venueCount : "—", p ? "Based on included issues after exclusions" : "Data not processed yet", "info")}
+          ${metricCard("Emails Ready", p ? emailCount : "—", p ? "Generated from current review" : "Process data to generate emails", "warn")}
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h3>Current workflow state</h3>
+          <div class="summary-list">
+            ${summaryItem("Status file", state.statusImport ? escapeHtml(state.statusImport.filename) : "Not loaded")}
+            ${summaryItem("Status loaded", state.statusImport ? formatDateTime(state.statusImport.uploadedAt) : "Not loaded")}
+            ${summaryItem("Session file", state.sessionImport ? escapeHtml(state.sessionImport.filename) : "Not loaded")}
+            ${summaryItem("Session loaded", state.sessionImport ? formatDateTime(state.sessionImport.uploadedAt) : "Not loaded")}
+            ${summaryItem("Processed", p ? formatDateTime(p.processedAt) : "Not processed")}
+            ${summaryItem("Excluded/ignored", p ? p.excludedIssues.length : "—")}
+          </div>
+          <div class="actions">
+            <button class="btn" onclick="showPage('status')">Upload Status CSV</button>
+            <button class="btn" onclick="showPage('session')">Upload Session CSV</button>
+            <button class="btn primary" onclick="showPage('review')">Go to Review</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function metricCard(title, value, sub, tone="") {
+      return `<div class="card"><div class="muted small">${title}</div><div class="metric ${tone}">${value}</div><div class="muted">${sub}</div></div>`;
+    }
+
+    function summaryItem(label, value) {
+      return `<div class="card" style="box-shadow:none;padding:12px"><div class="muted small">${label}</div><div>${value}</div></div>`;
+    }
+
+    function renderImport(kind) {
+      const isStatus = kind === "status";
+      const importData = state[`${kind}Import`];
+      const stats = isStatus ? getStatusStats() : getSessionStats();
+      const rules = isStatus
+        ? `<li>Connected? must be No</li><li>Platform must match included fixed-terminal platforms</li><li>DO NOT DELETE rows ignored</li><li>Blank Last Connection rows ignored</li>`
+        : `<li>In Session must be Yes</li><li>Last Session Open must be before today</li><li>Venue/outlet/terminal exclusions are applied during Review</li>`;
+      const statsHtml = isStatus
+        ? `<div class="summary-list">${summaryItem("Total rows", stats.total)}${summaryItem("Disconnected rows", stats.disconnected)}${summaryItem("Excluded platform", stats.excludedPlatform)}${summaryItem("Excluded server", stats.excludedServer)}${summaryItem("Blank Last Connection", stats.excludedBlank)}${summaryItem("Actionable offline", stats.actionable)}</div>`
+        : `<div class="summary-list">${summaryItem("Total rows", stats.total)}${summaryItem("In Session rows", stats.inSession)}${summaryItem("Opened today", stats.openedToday)}${summaryItem("Previous-day sessions", stats.previousDay)}${summaryItem("Missing date", stats.missingDate)}</div>`;
+      document.getElementById(kind).innerHTML = `
+        <div class="card">
+          <h3>${isStatus ? "Upload Terminal Status CSV" : "Upload Terminal Session Activity CSV"}</h3>
+          <p>${isStatus ? "Export the Terminal Status CSV in its default/full state. The tool filters out PAX/mobile devices and non-actionable rows." : "Uncheck Today Only in Kappture, export the Session Activity CSV, then upload it here."}</p>
+          <div class="file-box">
+            <input type="file" accept=".csv,text/csv" id="${kind}File" />
+            <div class="actions">
+              <button class="btn bad" onclick="state.${kind}Import=null; state.processed=null; saveState(); render();">Clear ${isStatus ? "Status" : "Session"} Import</button>
+            </div>
+          </div>
+          <h4>Rules applied</h4>
+          <ul class="muted">${rules}</ul>
+          ${importData ? `<p><span class="pill good">Loaded</span> ${escapeHtml(importData.filename)} — ${formatDateTime(importData.uploadedAt)}</p>${statsHtml}` : `<p><span class="pill warn">No file loaded</span></p>`}
+        </div>
+      `;
+      document.getElementById(`${kind}File`).addEventListener("change", e => handleFileUpload(kind, e.target.files[0]));
+    }
+
+    function renderReview() {
+      const p = state.processed;
+      const canProcess = state.statusImport && state.sessionImport;
+      let content = `
+        <div class="card">
+          <h3>Process Status/Session Data</h3>
+          <p class="muted">Upload both CSV exports, then process them together. Venue Management exclusions and today-only ignores are applied here.</p>
+          <div class="summary-list">
+            ${summaryItem("Status CSV", state.statusImport ? `${escapeHtml(state.statusImport.filename)}<br><span class='muted small'>${formatDateTime(state.statusImport.uploadedAt)}</span>` : "Not loaded")}
+            ${summaryItem("Session CSV", state.sessionImport ? `${escapeHtml(state.sessionImport.filename)}<br><span class='muted small'>${formatDateTime(state.sessionImport.uploadedAt)}</span>` : "Not loaded")}
+          </div>
+          <div class="actions">
+            <button class="btn primary" ${canProcess ? "" : "disabled"} onclick="processData()">Process Status/Session Data</button>
+          </div>
+        </div>`;
+
+      if (p) {
+        content += `<div class="card" style="margin-top:16px">
+          <h3>Processed summary</h3>
+          <div class="summary-list">
+            ${summaryItem("Actionable offline terminals", p.includedIssues.filter(i => i.type === "offline").length)}
+            ${summaryItem("Previous-day open sessions", p.includedIssues.filter(i => i.type === "session").length)}
+            ${summaryItem("Affected venues", Object.keys(p.venues || {}).length)}
+            ${summaryItem("Excluded/ignored issues", p.excludedIssues.length)}
+          </div>
+        </div>`;
+
+        content += `<div class="grid" style="margin-top:16px">${Object.values(p.venues || {}).sort((a,b)=>a.site.localeCompare(b.site)).map(renderVenueReview).join("")}</div>`;
+
+        if (p.excludedIssues.length) {
+          content += `<div class="card" style="margin-top:16px"><h3>Excluded or ignored issues</h3><div class="issue-list">${p.excludedIssues.map(renderExcludedIssue).join("")}</div></div>`;
+        }
+      }
+      document.getElementById("review").innerHTML = content;
+    }
+
+    function renderVenueReview(v) {
+      return `<details open>
+        <summary>
+          <div><strong>${escapeHtml(v.site)}</strong><div class="muted small">${v.offline.length} offline · ${v.sessions.length} previous-day sessions</div></div>
+          <span class="pill info">Included</span>
+        </summary>
+        <div class="details-body">
+          ${v.offline.length ? `<h4>Offline terminal(s)</h4><div class="issue-list">${v.offline.map(i => renderIssue(i)).join("")}</div>` : ""}
+          ${v.sessions.length ? `<h4>Open session(s) from previous days</h4><div class="issue-list">${v.sessions.map(i => renderIssue(i)).join("")}</div>` : ""}
+        </div>
+      </details>`;
+    }
+
+    function renderIssue(i) {
+      return `<div class="issue">
+        <div><strong>${escapeHtml(i.terminal)}</strong> <span class="muted">(${escapeHtml(i.outlet)})</span><br><span class="muted small">${i.type === "offline" ? "Offline since" : "Session opened"}: ${escapeHtml(displayDateTime(i.dateTime))}</span></div>
+        <button class="btn warn" onclick="toggleTodayIgnore('${escapeHtml(i.id)}', true)">Ignore today</button>
+      </div>`;
+    }
+
+    function renderExcludedIssue(i) {
+      return `<div class="issue ignored">
+        <div><strong>${escapeHtml(i.terminal)}</strong> <span class="muted">(${escapeHtml(i.outlet)} / ${escapeHtml(i.site)})</span><br><span class="muted small">${escapeHtml(i.exclusion)} · ${i.type === "offline" ? "Offline since" : "Session opened"}: ${escapeHtml(displayDateTime(i.dateTime))}</span></div>
+        ${i.exclusion === "Ignored today" ? `<button class="btn good" onclick="toggleTodayIgnore('${escapeHtml(i.id)}', false)">Include again</button>` : ""}
+      </div>`;
+    }
+
+    function renderEmails() {
+      refreshProcessedExclusions();
+      const p = state.processed;
+      if (!p) {
+        document.getElementById("emails").innerHTML = `<div class="card"><h3>No emails ready</h3><p>Process Status/Session data first.</p><button class="btn primary" onclick="showPage('review')">Go to Review</button></div>`;
+        return;
+      }
+      const venues = Object.values(p.venues || {}).sort((a,b)=>a.site.localeCompare(b.site));
+      document.getElementById("emails").innerHTML = `<div class="grid">${venues.length ? venues.map(renderEmailCard).join("") : `<div class="card"><h3>No venue emails required</h3><p class="muted">No included issues were found.</p></div>`}</div>`;
+    }
+
+    function renderEmailCard(v) {
+      const email = generateEmail(v);
+      const sent = isSent(v.site);
+      return `<div class="card">
+        <h3>${escapeHtml(v.site)} ${sent ? `<span class="pill good">Sent</span>` : `<span class="pill warn">Not sent</span>`}</h3>
+        <div class="summary-list">
+          ${summaryItem("To", email.to || "Not configured")}
+          ${summaryItem("CC", email.cc || "None")}
+          ${summaryItem("Issues", `${v.offline.length} offline · ${v.sessions.length} sessions`)}
+        </div>
+        <label>Subject</label>
+        <input type="text" readonly value="${escapeHtml(email.subject)}" />
+        <label>Email body</label>
+        <div class="email-body">${escapeHtml(email.body)}</div>
+        <div class="actions">
+          <button class="btn" onclick="copyText('${escapeForJs(email.to)}', 'To copied')">Copy To</button>
+          <button class="btn" onclick="copyText('${escapeForJs(email.cc)}', 'CC copied')">Copy CC</button>
+          <button class="btn" onclick="copyText('${escapeForJs(email.subject)}', 'Subject copied')">Copy Subject</button>
+          <button class="btn" onclick="copyText('${escapeForJs(email.body)}', 'Body copied')">Copy Body</button>
+          <a class="btn primary" href="${escapeHtml(mailtoLink(email))}">Open in Outlook</a>
+          <button class="btn good" onclick="markSent('${escapeForJs(v.site)}', true)">Mark as sent</button>
+          <button class="btn bad" onclick="markSent('${escapeForJs(v.site)}', false)">Clear sent</button>
+        </div>
+      </div>`;
+    }
+
+    function escapeForJs(value) {
+      return String(value ?? "").replaceAll("\\", "\\\\").replaceAll("'", "\\'").replaceAll("\n", "\\n").replaceAll("\r", "");
+    }
+
+    function renderReport() {
+      const report = dailyReportText();
+      document.getElementById("report").innerHTML = `<div class="card">
+        <h3>Daily Report</h3>
+        <div class="report-body">${escapeHtml(report)}</div>
+        <div class="actions">
+          <button class="btn" onclick="copyText('${escapeForJs(report)}', 'Daily report copied')">Copy Daily Report</button>
+          <button class="btn" onclick="downloadText('kappture-daily-report-${todayKey()}.csv', dailyReportCsv(), 'text/csv')">Download CSV</button>
+          <button class="btn good" onclick="saveSnapshot()">Save Daily Snapshot</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px"><h3>Saved snapshots</h3><p class="muted">${state.dailySnapshots.length} snapshot(s) saved in this browser.</p></div>`;
+    }
+
+    function renderVenues() {
+      const venues = Object.values(state.venueConfig || {}).sort((a,b)=>a.site.localeCompare(b.site));
+      document.getElementById("venues").innerHTML = `<div class="card">
+        <h3>Venue Management</h3>
+        <p class="muted">Venues, outlets and terminals are auto-created from imported CSV files. Add recipient details and set exclusions here.</p>
+        <div class="search-row"><div><label>Filter venues</label><input id="venueSearch" type="text" placeholder="Search venue, outlet or terminal" /></div><button class="btn" onclick="exportConfig()">Export config JSON</button></div>
+        <div id="venueList" class="grid">${venues.length ? venues.map(renderVenueConfig).join("") : `<p class="muted">No venues loaded yet. Upload and process CSV files to build the venue list.</p>`}</div>
+      </div>`;
+      const search = document.getElementById("venueSearch");
+      search?.addEventListener("input", () => {
+        const q = normaliseKey(search.value);
+        document.querySelectorAll("[data-venue-card]").forEach(card => card.style.display = normaliseKey(card.textContent).includes(q) ? "" : "none");
+      });
+      document.querySelectorAll(".tri-check").forEach(cb => {
+        cb.indeterminate = cb.dataset.state === "mixed";
+      });
+    }
+
+    function renderVenueConfig(v) {
+      const outletValues = Object.values(v.outlets || {}).sort((a,b)=>a.outlet.localeCompare(b.outlet));
+      const stateText = triStateForVenue(v);
+      return `<details data-venue-card>
+        <summary><div><strong>${escapeHtml(v.site)}</strong><div class="muted small">${outletValues.length} outlet(s)</div></div><span class="pill ${v.enabled ? 'good' : 'bad'}">${stateText}</span></summary>
+        <div class="details-body">
+          <label>To addresses ; separated</label><input type="text" value="${escapeHtml((v.to || []).join('; '))}" onchange="updateVenueContacts('${escapeForJs(v.site)}','to',this.value)" />
+          <label>CC addresses ; separated</label><input type="text" value="${escapeHtml((v.cc || []).join('; '))}" onchange="updateVenueContacts('${escapeForJs(v.site)}','cc',this.value)" />
+          <label>BCC addresses ; separated</label><input type="text" value="${escapeHtml((v.bcc || []).join('; '))}" onchange="updateVenueContacts('${escapeForJs(v.site)}','bcc',this.value)" />
+          <label>Notes</label><textarea onchange="updateVenueNotes('${escapeForJs(v.site)}',this.value)">${escapeHtml(v.notes || "")}</textarea>
+          <div class="tree">
+            <div class="tree-row"><input class="tri-check" data-state="${triStateForVenue(v, true)}" type="checkbox" ${v.enabled ? "checked" : ""} onchange="setVenueEnabled('${escapeForJs(v.site)}', this.checked)"><strong>${escapeHtml(v.site)}</strong></div>
+            ${outletValues.map(o => renderOutletConfig(v.site, o)).join("")}
+          </div>
+        </div>
+      </details>`;
+    }
+
+    function renderOutletConfig(site, o) {
+      const terminalValues = Object.values(o.terminals || {}).sort((a,b)=>a.terminal.localeCompare(b.terminal, "en-GB", { numeric: true }));
+      return `<div>
+        <div class="tree-row indent-1"><input class="tri-check" data-state="${triStateForOutlet(o, true)}" type="checkbox" ${o.enabled ? "checked" : ""} onchange="setOutletEnabled('${escapeForJs(site)}','${escapeForJs(o.outlet)}', this.checked)"><strong>${escapeHtml(o.outlet)}</strong></div>
+        ${terminalValues.map(t => `<div class="tree-row indent-2"><input type="checkbox" class="tri-check" data-state="${t.enabled ? 'checked' : 'unchecked'}" ${t.enabled ? "checked" : ""} onchange="setTerminalEnabled('${escapeForJs(site)}','${escapeForJs(o.outlet)}','${escapeForJs(t.terminal)}',this.checked)"><span>${escapeHtml(t.terminal)}</span></div>`).join("")}
+      </div>`;
+    }
+
+    function triStateForVenue(v, raw=false) {
+      const outlets = Object.values(v.outlets || {});
+      const terminals = outlets.flatMap(o => Object.values(o.terminals || {}));
+      if (v.enabled === false) return raw ? "unchecked" : "Excluded";
+      if (!terminals.length) return raw ? "checked" : "Included";
+      const enabled = terminals.filter(t => t.enabled !== false).length;
+      if (enabled === terminals.length) return raw ? "checked" : "Included";
+      if (enabled === 0) return raw ? "unchecked" : "Excluded";
+      return raw ? "mixed" : "Partially included";
+    }
+
+    function triStateForOutlet(o, raw=false) {
+      const terminals = Object.values(o.terminals || {});
+      if (o.enabled === false) return raw ? "unchecked" : "Excluded";
+      if (!terminals.length) return raw ? "checked" : "Included";
+      const enabled = terminals.filter(t => t.enabled !== false).length;
+      if (enabled === terminals.length) return raw ? "checked" : "Included";
+      if (enabled === 0) return raw ? "unchecked" : "Excluded";
+      return raw ? "mixed" : "Partially included";
+    }
+
+    function splitAddresses(value) {
+      return String(value || "").split(/[;,]/).map(v => v.trim()).filter(Boolean);
+    }
+
+    function updateVenueContacts(site, field, value) {
+      state.venueConfig[site][field] = splitAddresses(value);
+      saveState();
+    }
+
+    function updateVenueNotes(site, value) {
+      state.venueConfig[site].notes = value;
+      saveState();
+    }
+
+    function setVenueEnabled(site, enabled) {
+      state.venueConfig[site].enabled = enabled;
+      Object.values(state.venueConfig[site].outlets || {}).forEach(o => {
+        o.enabled = enabled;
+        Object.values(o.terminals || {}).forEach(t => t.enabled = enabled);
+      });
+      refreshProcessedExclusions();
+      render();
+    }
+
+    function setOutletEnabled(site, outlet, enabled) {
+      const o = state.venueConfig[site].outlets[outlet];
+      o.enabled = enabled;
+      Object.values(o.terminals || {}).forEach(t => t.enabled = enabled);
+      refreshProcessedExclusions();
+      render();
+    }
+
+    function setTerminalEnabled(site, outlet, terminal, enabled) {
+      state.venueConfig[site].outlets[outlet].terminals[terminal].enabled = enabled;
+      refreshProcessedExclusions();
+      render();
+    }
+
+    function exportConfig() {
+      downloadText(`kappture-tool-config-${todayKey()}.json`, JSON.stringify({ venueConfig: state.venueConfig, settings: state.settings }, null, 2), "application/json");
+    }
+
+    function importConfigFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (data.venueConfig) state.venueConfig = data.venueConfig;
+          if (data.settings) state.settings = deepMerge(state.settings, data.settings);
+          saveState();
+          render();
+          toast("Configuration imported");
+        } catch {
+          toast("Could not import configuration JSON");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function renderSettings() {
+      const t = state.settings.emailTemplate;
+      document.getElementById("settings").innerHTML = `<div class="grid">
+        <div class="card">
+          <h3>Included Status Platforms</h3>
+          <p class="muted">Only disconnected devices on these platforms are treated as actionable fixed-terminal offline issues.</p>
+          <textarea id="platformList">${escapeHtml((state.settings.allowedPlatforms || []).join("\n"))}</textarea>
+          <div class="actions"><button class="btn primary" onclick="savePlatforms()">Save platforms</button><button class="btn" onclick="resetPlatforms()">Reset defaults</button></div>
+        </div>
+        <div class="card">
+          <h3>Email Template</h3>
+          <label>Greeting</label><input id="tmplGreeting" type="text" value="${escapeHtml(t.greeting)}" />
+          <label>Intro paragraph</label><textarea id="tmplIntro">${escapeHtml(t.intro)}</textarea>
+          <label>Offline heading</label><input id="tmplOffline" type="text" value="${escapeHtml(t.offlineHeading)}" />
+          <label>Open session heading</label><input id="tmplSession" type="text" value="${escapeHtml(t.sessionHeading)}" />
+          <label>Optional sign-off</label><textarea id="tmplSignOff">${escapeHtml(t.signOff)}</textarea>
+          <div class="actions"><button class="btn primary" onclick="saveTemplate()">Save template</button><button class="btn" onclick="resetTemplate()">Reset template</button></div>
+        </div>
+        <div class="card">
+          <h3>Data controls</h3>
+          <div class="actions">
+            <button class="btn" onclick="exportConfig()">Export configuration JSON</button>
+            <label class="btn">Import configuration JSON<input type="file" accept="application/json,.json" style="display:none" onchange="importConfigFile(this.files[0])"></label>
+            <button class="btn warn" onclick="state.statusImport=null;state.sessionImport=null;state.processed=null;saveState();render();">Clear imports</button>
+            <button class="btn bad" onclick="if(confirm('Clear all saved Kappture tool data in this browser?')){state=defaultState();saveState();render();}">Clear all saved data</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function savePlatforms() {
+      state.settings.allowedPlatforms = document.getElementById("platformList").value.split(/\n/).map(normaliseText).filter(Boolean);
+      state.processed = null;
+      saveState();
+      render();
+      toast("Platforms saved. Re-process data to apply changes.");
+    }
+
+    function resetPlatforms() {
+      state.settings.allowedPlatforms = [...FIXED_TERMINAL_PLATFORMS];
+      state.processed = null;
+      saveState();
+      render();
+    }
+
+    function saveTemplate() {
+      state.settings.emailTemplate = {
+        greeting: document.getElementById("tmplGreeting").value,
+        intro: document.getElementById("tmplIntro").value,
+        offlineHeading: document.getElementById("tmplOffline").value,
+        sessionHeading: document.getElementById("tmplSession").value,
+        signOff: document.getElementById("tmplSignOff").value
+      };
+      saveState();
+      toast("Template saved");
+    }
+
+    function resetTemplate() {
+      state.settings.emailTemplate = {...DEFAULT_EMAIL_TEMPLATE};
+      saveState();
+      render();
+    }
+
+    function render() {
+      if (currentPage === "home") renderHome();
+      if (currentPage === "status") renderImport("status");
+      if (currentPage === "session") renderImport("session");
+      if (currentPage === "review") renderReview();
+      if (currentPage === "emails") renderEmails();
+      if (currentPage === "report") renderReport();
+      if (currentPage === "venues") renderVenues();
+      if (currentPage === "settings") renderSettings();
+    }
+
+    initNav();
+    showPage("home");
+    tickClock();
+    setInterval(tickClock, 1000);
+  </script>
+</body>
+</html>
