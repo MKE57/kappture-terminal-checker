@@ -54,4 +54,4 @@ The tool runs entirely in the browser — no installation, backend, or external 
 
 ## Version
 
-Current version:
+Current version: 1.6.7
